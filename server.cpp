@@ -59,6 +59,8 @@ int main() {
 
     //6.收发数据
     char buffer[1024];
+    std::string leftover;//存放未传输完的数据
+
     while (true) {
         //recv()也是阻塞的，等待客户端发数据过来
         int bytes_read = recv(client_fd, buffer, sizeof(buffer)-1, 0);
@@ -71,13 +73,17 @@ int main() {
             break;
         }
         buffer[bytes_read] = '\0';
-        std::cout << "Received: \n" << buffer << std::endl;
-        int bytes_sent = send(client_fd, buffer, bytes_read, 0);
-        if (bytes_sent == -1) {
-            std::cerr << "Error send to client" << std::endl;
-            break;
+        leftover += std::string(buffer, bytes_read);//拼接
+        size_t pos;
+        //处理每一条数据
+        while ((pos = leftover.find('\n')) != std::string::npos) {
+            std::string line = leftover.substr(0, pos);
+            leftover = leftover.substr(pos + 1);
+            std::cout << "Received Line:" << line << std::endl;
+            std::string reply = line + "\n";
+            send(client_fd, reply.c_str(), reply.size(), 0);
+            std::cout << "Sent Line:" << reply << std::endl;
         }
-        std::cout << "Send:" << bytes_sent << " bytes" << std::endl;
     }
 
     close(server_fd);
